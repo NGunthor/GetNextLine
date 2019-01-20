@@ -6,58 +6,87 @@
 /*   By: ngunthor <ngunthor@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/12/03 16:35:13 by ngunthor          #+#    #+#             */
-/*   Updated: 2019/01/17 16:09:53 by ngunthor         ###   ########.fr       */
+/*   Updated: 2019/01/21 01:33:13 by ngunthor         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <unistd.h>
-#include <stdio.h>
+#include "get_next_line.h"
 
-char	*new_str(char *input)
+static t_fdlist	*select_head(t_fdlist **head, int fd)
 {
-	int 	i;
-	char	*output;
+	t_fdlist	*temp;
+
+	temp = *head;
+	while (temp)
+	{
+		if (temp->fd == fd)
+			return (temp);
+		temp = temp->next;
+	}
+	if (!(temp = (t_fdlist*)malloc(sizeof(t_fdlist))))
+		return (NULL);
+	temp->fd = fd;
+	temp->ret = 0;
+	temp->data = ft_strnew(0);
+	temp->next = *head;
+	*head = temp;
+	return (temp);
+}
+
+static void		joinstr(char **s1, char *s2)
+{
+	char *temp;
+
+	temp = ft_strnew(ft_strlen(*s1) + ft_strlen(s2));
+	ft_strcpy(temp, *s1);
+	ft_strcat(temp, s2);
+	ft_strdel(s1);
+	*s1 = ft_strdup(temp);
+	ft_strdel(&temp);
+}
+
+static void		move_to_out(char **data, char **line)
+{
+	char	*temp;
+	int		n;
+	int		i;
 
 	i = 0;
-	while(*input != '\0')
-		i++;
-	output = ft_strnew(i);
-	while (i > 0)
+	n = 0;
+	temp = ft_strdup(*data);
+	while (temp[i] != '\n' && temp[i])
 	{
-		output[i] = input[i];
 		i++;
+		n++;
 	}
-	return (output);
+	*line = ft_strnew(n);
+	ft_strncpy(*line, *data, n);
+	ft_strdel(data);
+	if (n < (int)ft_strlen(temp))
+		*data = ft_strdup(temp + n + 1);
+	else
+		*data = ft_strdup("\0");
+	ft_strdel(&temp);
 }
 
-int		ft_sstrchr(const char *s, int c)
+int				get_next_line(const int fd, char **line)
 {
-	unsigned int length;
+	static t_fdlist	*head;
+	t_fdlist		*current;
+	char			buff[BUFF_SIZE + 1];
 
-	while (*s)
+	if (read(fd, buff, 0) < 0 || fd < 0 || line == 0)
+		return (-1);
+	current = select_head(&head, fd);
+	while ((current->ret = read(fd, buff, BUFF_SIZE)) > 0)
 	{
-		if (*s == ((char)c);
-			return (1);
+		buff[current->ret] = '\0';
+		joinstr(&current->data, buff);
+		if (ft_strchr(buff, '\n'))
+			break ;
 	}
-	return (0);
-}
-
-int		main()
-{
-	static int	pos;
-	int			n;
-	char		*buff[BUFF_SIZE];
-	char		*str;
-
-	while ((n = read(0, buff, BUFF_SIZE) > 0)
-	{
-		if (ft_sstrchr(buff, '\0'))
-		{
-			str = ft_strjoin(str, new_str(buff));
-			return (0);
-		else
-			str = ft_strjoin(str, buff);
-	}
-	printf("%s\n", str);
-	return (0);
+	if (ft_strlen(current->data) == 0)
+		return (0);
+	move_to_out(&current->data, line);
+	return (1);
 }
